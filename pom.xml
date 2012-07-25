@@ -1,0 +1,22 @@
+<project
+		xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd"
+		xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+	<modelVersion>4.0.0</modelVersion>
+	<groupId>net.pocorall</groupId>
+	<artifactId>jogak</artifactId>
+	<version>0.2</version>
+	<description>Yet another Component Oriented User Interface</description>
+	<parent>
+		<groupId>net.pocorall</groupId>
+		<artifactId>pocorall-spring-scala-base-pom</artifactId>
+		<version>1.0</version>
+		<relativePath/>
+	</parent>
+	<properties>
+	</properties>
+	<build>
+		
+	</build>
+	<dependencies>
+	</dependencies>
+</project>

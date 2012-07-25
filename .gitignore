@@ -1,0 +1,8 @@
+db/
+target/
+.*/
+*.iml
+overlays/
+gen/
+Debug/
+Release/
