@@ -1,7 +1,11 @@
 package net.pocorall.jogak
 
-import java.io.{BufferedReader, Reader, InputStream}
+import java.io.{InputStreamReader, BufferedReader, Reader, InputStream}
 import javax.swing.JFileChooser
+import javax.imageio.ImageIO
+import java.awt.Desktop
+import java.awt.image.BufferedImage
+import viewer.{SimpleStringViewer, SimpleImageViewer}
 
 object SimpleFunctions {
 
@@ -30,7 +34,6 @@ object SimpleFunctions {
     out.toString()
   }
 
-
   def simpleReaderToString(in: Reader) = {
     val bin = new BufferedReader(in)
     val out = new StringBuilder()
@@ -45,7 +48,6 @@ object SimpleFunctions {
     out.toString()
   }
 
-
   def saveStringAs(in: String) {
     val fc = new JFileChooser();
     val returnVal = fc.showOpenDialog(null);
@@ -58,5 +60,19 @@ object SimpleFunctions {
       // canceled
     }
   }
-}
 
+  val toBufferedImage = new Filter[NamedInputStream]("to BufferedImage", is => ImageIO.read(is.inputStream))
+  val toReader = new Filter[NamedInputStream]("to Reader", is => new InputStreamReader(is.inputStream))
+  val open = new Command[java.io.File]("open", fi => Desktop.getDesktop().open(fi))
+  val edit = new Command[java.io.File]("edit", fi => Desktop.getDesktop().edit(fi))
+  val print = new Command[java.io.File]("print", fi => Desktop.getDesktop().print(fi))
+  val simpleImageViewer = new Filter[BufferedImage]("SimpleImageViewer", new SimpleImageViewer(_))
+  val simpleToString = new Filter[Reader]("to String (head)", simpleReaderToString)
+  val simpleToHexString = new Filter[InputStream]("to hex String (head)", simpleInputStreamToHexString)
+  val simpleStringViewer = new Filter[String]("SimpleStringViewer", new SimpleStringViewer(_))
+  val toLowerCase = new Command[String]("to lowercase", _.toLowerCase)
+  val toUpperCase = new Command[String]("to uppercase", _.toUpperCase)
+  val trim = new Command[String]("trim", _.trim)
+  val saveStrAs = new Command[String]("save as...", saveStringAs)
+  val toInputStream = new Filter[NamedInputStream]("to InputStream", _.inputStream)
+}

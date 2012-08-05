@@ -61,15 +61,19 @@ class TreeViewer(var model: TreeNodeModel, implicit val viewerRegistry: ViewerRe
           cr.lookup(obj).foreach {
             com => com match {
               case c: Filter[Nothing] =>
-                val result = com.execute(obj)
-                result match {
-                  case f: Viewer =>
-                    addMenuItem(menu, com.name, _ => spane.setRightComponent(f))
-                  case _ =>
-                    val m = new JMenu(com.name)
-                    //                  println(result.getClass().toString)
-                    buildMenu(result, m)
-                    menu.add(m)
+                try {
+                  val result = com.execute(obj)
+                  result match {
+                    case f: Viewer =>
+                      addMenuItem(menu, com.name, _ => spane.setRightComponent(f))
+                    case _ =>
+                      val m = new JMenu(com.name)
+                      //                  println(result.getClass().toString)
+                      buildMenu(result, m)
+                      menu.add(m)
+                  }
+                } catch {
+                  case e: Any => //swallow
                 }
               case c: Command[Nothing] =>
                 addMenuItem(menu, com.name, _ => spane.setRightComponent(viewerRegistry.lookup(com.execute(obj))))
