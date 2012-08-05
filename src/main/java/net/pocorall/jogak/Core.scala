@@ -11,8 +11,18 @@ trait ViewerRegistry {
   def lookup(thing: Any): Viewer
 }
 
-class Command(val name: String, result: => Any) {
-  def run() = result
+class Command[-T: Manifest](val name: String, val command: T => Any) {
+  val fromClass = manifest[T].erasure
+
+  def execute(param: Any): Any = {
+    if (isAssignable(param)) {
+      return command.asInstanceOf[Any => Any](param)
+    }
+    return null
+  }
+
+  def isAssignable(param: Any): Boolean = fromClass.isAssignableFrom(param.getClass)
+
 }
 
-class Filter(name: String, result: => Any) extends Command(name, result)
+class Filter[-T: Manifest](name: String, val result: T => Any) extends Command[T](name, result)

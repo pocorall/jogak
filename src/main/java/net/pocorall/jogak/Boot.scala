@@ -1,12 +1,9 @@
 package net.pocorall.jogak
 
 import javax.swing._
-import table.TableModel
 import java.io
-import event.TableModelListener
 import io._
-import java.awt.event.{ActionEvent, ActionListener, MouseEvent, MouseAdapter}
-import java.awt.{Desktop, Graphics, Dimension, BorderLayout}
+import java.awt.Desktop
 import viewer.{TreeViewer, SimpleImageViewer, SimpleStringViewer}
 import java.awt.image.BufferedImage
 import javax.imageio.ImageIO
@@ -47,17 +44,17 @@ object Extensions {
 import net.pocorall.jogak.SimpleFunctions._
 
 class CommandRegistry {
-  def lookup(thing: Any): Array[Command] = {
-    val result = new mutable.MutableList[Command]
+  def lookup(thing: Any): Array[Command[Nothing]] = {
+    val result = new mutable.MutableList[Command[Nothing]]
     thing match {
-      case f: File if (f.file.isDirectory) => result += new Filter("Explore directory", new TreeViewer(f, new SimpleViewerRegistry))
+      case f: File if (f.file.isDirectory) => result += new Filter[File]("Explore directory", new TreeViewer(_, new SimpleViewerRegistry))
 
       case _ =>
         thing match {
           case f: File =>
-            result += new Command("open", Desktop.getDesktop().open(f.file))
-            result += new Command("edit", Desktop.getDesktop().edit(f.file))
-            result += new Command("print", Desktop.getDesktop().print(f.file))
+            result += new Command[File]("open", fi => Desktop.getDesktop().open(fi.file))
+            result += new Command[File]("edit", fi => Desktop.getDesktop().edit(fi.file))
+            result += new Command[File]("print", fi => Desktop.getDesktop().print(fi.file))
           case _ =>
         }
         thing match {
@@ -67,43 +64,42 @@ class CommandRegistry {
             val ext = if (dot > 0) name.substring(dot) else name
 
             ext match {
-              case e if (Extensions.images contains e) => result += new Filter("to BufferedImage", ImageIO.read(n.inputStream))
-              case e if (Extensions.texts contains e) => result += new Filter("to Reader", new InputStreamReader(n.inputStream))
+              case e if (Extensions.images contains e) => result += new Filter[NamedInputStream]("to BufferedImage", is => ImageIO.read(is.inputStream))
+              case e if (Extensions.texts contains e) => result += new Filter[NamedInputStream]("to Reader", is => new InputStreamReader(is.inputStream))
               case _ =>
             }
 
-            result += new Filter("to InputStream", n.inputStream)
+            result += new Filter[NamedInputStream]("to InputStream", _.inputStream)
           }
           case _ =>
         }
     }
 
     thing match {
-      case f: InputStream => result += new Filter("to hex String", simpleInputStreamToHexString(f))
+      case f: InputStream => result += new Filter[InputStream]("to hex String", simpleInputStreamToHexString)
       case _ =>
     }
     thing match {
-      case f: Reader => result += new Filter("to String", simpleReaderToString(f))
+      case f: Reader => result += new Filter[Reader]("to String", simpleReaderToString)
       case _ =>
     }
     thing match {
-      case f: BufferedImage => result += new Filter("SimpleImageViewer", new SimpleImageViewer(f))
+      case f: BufferedImage => result += new Filter[BufferedImage]("SimpleImageViewer", new SimpleImageViewer(_))
       case _ =>
     }
     thing match {
       case s: String =>
-        result += new Filter("SimpleStringViewer", new SimpleStringViewer(s))
-        result += new Command("to lowercase", s.toLowerCase)
-        result += new Command("to uppercase", s.toUpperCase)
-        result += new Command("trim", s.trim)
-        result += new Command("save as...", saveStringAs(s))
+        result += new Filter[String]("SimpleStringViewer", new SimpleStringViewer(_))
+        result += new Command[String]("to lowercase", _.toLowerCase)
+        result += new Command[String]("to uppercase", _.toUpperCase)
+        result += new Command[String]("trim", _.trim)
+        result += new Command[String]("save as...", saveStringAs)
 
       case _ =>
     }
 
     result.toArray
   }
-
 }
 
 class SimpleViewerRegistry extends ViewerRegistry {
@@ -136,20 +132,21 @@ class SimpleViewerRegistry extends ViewerRegistry {
 
 object TTest {
   def main(args: Array[String]) {
-    class MyCommand[-T, +R](val name: String, val execute: T => R)
+    class MyCommand[-T: Manifest](val name: String, val execute: T => Any) {
+      val fromClass = manifest[T].erasure
+    }
     // prepare two commands
-    val commands = new mutable.MutableList[MyCommand[Nothing, Any]]
-    commands += new MyCommand[String, String]("lower", s => s.toLowerCase())
-    commands += new MyCommand[Date, Long]("time", d => d.getTime)
+    val commands = new mutable.MutableList[MyCommand[Nothing]]
+    commands += new MyCommand[String]("lower", _.toLowerCase)
+    commands += new MyCommand[Date]("time", _.getTime)
     // prepare two data
     val data = Array("StRiNG", new Date())
     data.foreach {
       d => commands.foreach {
         c =>
-        //          c.execute match {
-        //            case m: (d.getClass => Any) => println(c.execute(d))
-        //          }
-        // println(c.execute(d)) if d is applicable to c.execute().
+          if (d.getClass.isAssignableFrom(c.fromClass)) {
+            println("    cmd(data) = " + c.execute.asInstanceOf[Any => Any](d))
+          }
       }
     }
   }
