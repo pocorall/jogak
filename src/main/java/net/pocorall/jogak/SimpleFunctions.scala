@@ -1,11 +1,12 @@
 package net.pocorall.jogak
 
 import java.io.{InputStreamReader, BufferedReader, Reader, InputStream}
-import javax.swing.JFileChooser
+import javax.swing._
 import javax.imageio.ImageIO
 import java.awt.Desktop
 import java.awt.image.BufferedImage
-import viewer.{SimpleStringViewer, SimpleImageViewer}
+import viewer.{TreeViewer, SimpleStringViewer, SimpleImageViewer}
+import java.awt.event.{ActionListener, ActionEvent}
 
 object SimpleFunctions {
 
@@ -61,18 +62,65 @@ object SimpleFunctions {
     }
   }
 
+  implicit def toActionListener(f: ActionEvent => Unit) = new ActionListener {
+    def actionPerformed(e: ActionEvent) {
+      f(e)
+    }
+  }
+
+  def addMenuItem(menu: JComponent, name: String, actionListener: ActionEvent => Unit) {
+    val item = new JMenuItem(name)
+    item.addActionListener(actionListener)
+    menu.add(item)
+  }
+
+  val cr = new CommandRegistry()
+
+  def buildMenu(obj: Any, menu: JComponent, spane: JSplitPane) {
+    cr.lookup(obj).foreach {
+      com => com match {
+        case c: Filter[Nothing] =>
+          try {
+            val result = com.execute(obj)
+            result match {
+              case f: Viewer =>
+                addMenuItem(menu, com.name, _ => spane.setRightComponent(f))
+              case _ =>
+                val m = new JMenu(com.name)
+                //                  println(result.getClass().toString)
+                buildMenu(result, m, spane)
+                menu.add(m)
+            }
+          } catch {
+            case e: Any => //swallow
+          }
+        case c: Command[Nothing] =>
+          addMenuItem(menu, com.name, _ => spane.setRightComponent((new CommandRegistry).getDefaultViewer(com.execute(obj))))
+        case _ =>
+      }
+    }
+  }
+
+  val filter = new Filter[File]("File", _.file)
+
   val toBufferedImage = new Filter[NamedInputStream]("to BufferedImage", is => ImageIO.read(is.inputStream))
   val toReader = new Filter[NamedInputStream]("to Reader", is => new InputStreamReader(is.inputStream))
+  val toInputStream = new Filter[NamedInputStream]("to InputStream", _.inputStream)
+
   val open = new Command[java.io.File]("open", fi => Desktop.getDesktop().open(fi))
   val edit = new Command[java.io.File]("edit", fi => Desktop.getDesktop().edit(fi))
   val print = new Command[java.io.File]("print", fi => Desktop.getDesktop().print(fi))
+  val namedFileInputStream = new Filter[java.io.File]("FileInputStream", fi => new NamedFileInputStream(fi))
+  val explore = new Filter[java.io.File]("Explore directory", fi => new TreeViewer(new File(fi), new CommandRegistry))
+
   val simpleImageViewer = new Filter[BufferedImage]("SimpleImageViewer", new SimpleImageViewer(_))
+
   val simpleToString = new Filter[Reader]("to String (head)", simpleReaderToString)
   val simpleToHexString = new Filter[InputStream]("to hex String (head)", simpleInputStreamToHexString)
+
   val simpleStringViewer = new Filter[String]("SimpleStringViewer", new SimpleStringViewer(_))
   val toLowerCase = new Command[String]("to lowercase", _.toLowerCase)
   val toUpperCase = new Command[String]("to uppercase", _.toUpperCase)
   val trim = new Command[String]("trim", _.trim)
   val saveStrAs = new Command[String]("save as...", saveStringAs)
-  val toInputStream = new Filter[NamedInputStream]("to InputStream", _.inputStream)
 }

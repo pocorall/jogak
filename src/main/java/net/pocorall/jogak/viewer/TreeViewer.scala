@@ -7,7 +7,9 @@ import java.awt.event.{MouseEvent, MouseAdapter, ActionListener, ActionEvent}
 import java.awt.{Dimension, BorderLayout}
 import net.pocorall.jogak._
 
-class TreeViewer(var model: TreeNodeModel, implicit val viewerRegistry: ViewerRegistry) extends Viewer {
+class TreeViewer(var model: TreeNodeModel, implicit val viewerRegistry: CommandRegistry) extends Viewer {
+  override def thing = model
+
   val tableModel = new TableModel() {
     def getRowCount = model.child().length
 
@@ -36,11 +38,6 @@ class TreeViewer(var model: TreeNodeModel, implicit val viewerRegistry: ViewerRe
     }
   }
 
-  def addMenuItem(menu: JComponent, name: String, actionListener: ActionEvent => Unit) {
-    val item = new JMenuItem(name)
-    item.addActionListener(actionListener)
-    menu.add(item)
-  }
 
   table.addMouseListener(new MouseAdapter() {
     override def mouseClicked(e: MouseEvent) {
@@ -53,37 +50,12 @@ class TreeViewer(var model: TreeNodeModel, implicit val viewerRegistry: ViewerRe
         if (e.getClickCount == 2) {
           setModel(newModel)
         } else {
-          spane.setRightComponent(viewerRegistry.lookup(newModel))
+          spane.setRightComponent(viewerRegistry.getDefaultViewer(newModel))
         }
       } else {
-        val cr = new CommandRegistry()
-        def buildMenu(obj: Any, menu: JComponent) {
-          cr.lookup(obj).foreach {
-            com => com match {
-              case c: Filter[Nothing] =>
-                try {
-                  val result = com.execute(obj)
-                  result match {
-                    case f: Viewer =>
-                      addMenuItem(menu, com.name, _ => spane.setRightComponent(f))
-                    case _ =>
-                      val m = new JMenu(com.name)
-                      //                  println(result.getClass().toString)
-                      buildMenu(result, m)
-                      menu.add(m)
-                  }
-                } catch {
-                  case e: Any => //swallow
-                }
-              case c: Command[Nothing] =>
-                addMenuItem(menu, com.name, _ => spane.setRightComponent(viewerRegistry.lookup(com.execute(obj))))
-              case _ =>
-            }
 
-          }
-        }
         val menu = new JPopupMenu()
-        buildMenu(newModel, menu)
+        SimpleFunctions.buildMenu(newModel, menu, spane)
 
         menu.show(e.getComponent(), e.getX(), e.getY());
       }

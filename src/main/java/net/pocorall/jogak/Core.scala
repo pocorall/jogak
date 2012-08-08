@@ -1,10 +1,23 @@
 package net.pocorall.jogak
 
-import javax.swing.JPanel
+import javax.swing.{JMenu, SwingUtilities, JPanel}
 import java.awt.BorderLayout
+import java.awt.event.{MouseEvent, MouseAdapter}
 
 /**marker class */
-abstract class Viewer extends JPanel(new BorderLayout);
+abstract class Viewer extends JPanel(new BorderLayout) {
+  def thing: Any
+
+  addMouseListener(new MouseAdapter {
+    override def mouseReleased(e: MouseEvent) {
+      if (SwingUtilities.isRightMouseButton(e)) {
+        val m = new JMenu(thing.toString)
+        //        buildMenu(thing, m, spane)
+        //        menu.add(m)
+      }
+    }
+  })
+}
 
 
 trait ViewerRegistry {

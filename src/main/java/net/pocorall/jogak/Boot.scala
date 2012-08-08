@@ -3,7 +3,7 @@ package net.pocorall.jogak
 import javax.swing._
 import java.io
 import io._
-import viewer.{TreeViewer, SimpleImageViewer, SimpleStringViewer}
+import viewer.{EverythingViewer, TreeViewer, SimpleImageViewer, SimpleStringViewer}
 import java.awt.image.BufferedImage
 import javax.imageio.ImageIO
 import collection.mutable
@@ -20,12 +20,15 @@ trait NamedInputStream {
   def inputStream: InputStream
 }
 
-class File(val file: java.io.File = new java.io.File("/")) extends TreeNodeModel with NamedInputStream {
+class File(val file: java.io.File = new java.io.File("/")) extends TreeNodeModel {
   def parent() = if (file.getParent == null) null else new File(file.getParentFile)
 
   def child() = if (file.isDirectory && file.listFiles != null) file.listFiles.map(new File(_)) else Array[TreeNodeModel]()
 
   override def toString() = file.toString
+}
+
+class NamedFileInputStream(val file: java.io.File) extends NamedInputStream {
 
   def name = file.getName
 
@@ -39,22 +42,43 @@ object Extensions {
 
 import net.pocorall.jogak.SimpleFunctions._
 
+
 class CommandRegistry {
+  def applyDefaultFilterChain(thing: Any): Any = {
+    lookup(thing).find(c => c.isInstanceOf[Filter[Nothing]]) match {
+      case Some(c) => applyDefaultFilterChain(c.execute(thing))
+      case None => thing
+    }
+  }
+
+  def getDefaultViewer(thing: Any): Viewer = {
+    applyDefaultFilterChain(thing) match {
+      case v: Viewer => v
+      case t => new EverythingViewer(t)
+    }
+  }
+
   def lookup(thing: Any): Array[Command[Nothing]] = {
     val result = new mutable.MutableList[Command[Nothing]]
     thing match {
-      case f: File => result += new Filter[File]("File", _.file)
-      case f: java.io.File if (f.isDirectory) => result += new Filter[java.io.File]("Explore directory", fi => new TreeViewer(new File(fi), new SimpleViewerRegistry))
+      case f: File => result += filter
       case _ =>
     }
 
     thing match {
       case f: java.io.File =>
+        if (f.isDirectory) {
+          result += explore
+        } else {
+          result += namedFileInputStream
+        }
         result += open
         result += edit
         result += print
+
       case _ =>
     }
+
     thing match {
       case n: NamedInputStream => {
         val name = n.name.toLowerCase
@@ -99,42 +123,15 @@ class CommandRegistry {
   }
 }
 
-class SimpleViewerRegistry extends ViewerRegistry {
-  override def lookup(thing: Any): Viewer = (thing) match {
-    case f: File if (f.file.isDirectory) => new TreeViewer(f, this)
-
-    case n: NamedInputStream => {
-      val name = n.name.toLowerCase
-      val dot = name.lastIndexOf('.')
-      val ext = if (dot > 0) name.substring(dot) else name
-
-      ext match {
-        case e if (Extensions.images contains e) => lookup(ImageIO.read(n.inputStream))
-        case e if (Extensions.texts contains e) => lookup(new InputStreamReader(n.inputStream))
-
-        case _ => lookup(n.inputStream)
-      }
-    }
-
-    case f: InputStream => lookup(simpleInputStreamToHexString(f))
-    case f: Reader => lookup(simpleReaderToString(f))
-
-    case f: BufferedImage => new SimpleImageViewer(f)
-    case f: String => new SimpleStringViewer(f)
-
-    case f => lookup(f.toString)
-  }
-}
-
 object Boot {
   def showDesktop() {
     javax.swing.SwingUtilities.invokeLater(new Runnable() {
       def run() {
         val frame = new JFrame("Jogak")
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE)
-        implicit val viewerRegistry = new SimpleViewerRegistry
+        implicit val viewerRegistry = new CommandRegistry
 
-        val label = new TreeViewer(new File(new io.File("C:\\")), viewerRegistry)
+        val label = new TreeViewer(new File(new io.File("/")), viewerRegistry)
         frame.getContentPane().add(label)
 
         frame.pack()
