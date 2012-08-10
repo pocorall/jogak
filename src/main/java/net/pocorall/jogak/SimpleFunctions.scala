@@ -4,7 +4,7 @@ import java.io.{InputStreamReader, BufferedReader, Reader, InputStream}
 import javax.swing._
 import javax.imageio.ImageIO
 import java.awt.Desktop
-import java.awt.image.BufferedImage
+import java.awt.image.{RescaleOp, BufferedImage}
 import viewer.{TreeViewer, SimpleStringViewer, SimpleImageViewer}
 import java.awt.event.{ActionListener, ActionEvent}
 
@@ -74,9 +74,9 @@ object SimpleFunctions {
     menu.add(item)
   }
 
-  val cr = new CommandRegistry()
+  val cr = new SimpleStaticCommandRegistry()
 
-  def buildMenu(obj: Any, menu: JComponent, spane: JSplitPane) {
+  def buildMenu(obj: Any, menu: JComponent, showView: Viewer => Unit) {
     cr.lookup(obj).foreach {
       com => com match {
         case c: Filter[Nothing] =>
@@ -84,36 +84,81 @@ object SimpleFunctions {
             val result = com.execute(obj)
             result match {
               case f: Viewer =>
-                addMenuItem(menu, com.name, _ => spane.setRightComponent(f))
+                addMenuItem(menu, com.name, _ => showView(f))
               case _ =>
                 val m = new JMenu(com.name)
                 //                  println(result.getClass().toString)
-                buildMenu(result, m, spane)
+                buildMenu(result, m, showView)
                 menu.add(m)
             }
           } catch {
             case e: Any => //swallow
           }
         case c: Command[Nothing] =>
-          addMenuItem(menu, com.name, _ => spane.setRightComponent((new CommandRegistry).getDefaultViewer(com.execute(obj))))
+          addMenuItem(menu, com.name, _ => showView((new SimpleStaticCommandRegistry).getDefaultViewer(com.execute(obj))))
         case _ =>
       }
     }
   }
 
-  val filter = new Filter[File]("File", _.file)
+  val file = new Filter[File]("File", _.file)
 
-  val toBufferedImage = new Filter[NamedInputStream]("to BufferedImage", is => ImageIO.read(is.inputStream))
-  val toReader = new Filter[NamedInputStream]("to Reader", is => new InputStreamReader(is.inputStream))
+  val toBufferedImage = new Filter[NamedInputStream]("to BufferedImage",
+    is => ImageIO.read(is.inputStream),
+    is => Extensions.images contains Extensions.getExtension(is.name))
+  val toReader = new Filter[NamedInputStream]("to Reader",
+    is => new InputStreamReader(is.inputStream),
+    is => Extensions.texts contains Extensions.getExtension(is.name))
+
   val toInputStream = new Filter[NamedInputStream]("to InputStream", _.inputStream)
 
   val open = new Command[java.io.File]("open", fi => Desktop.getDesktop().open(fi))
   val edit = new Command[java.io.File]("edit", fi => Desktop.getDesktop().edit(fi))
   val print = new Command[java.io.File]("print", fi => Desktop.getDesktop().print(fi))
-  val namedFileInputStream = new Filter[java.io.File]("FileInputStream", fi => new NamedFileInputStream(fi))
-  val explore = new Filter[java.io.File]("Explore directory", fi => new TreeViewer(new File(fi), new CommandRegistry))
+  val namedFileInputStream = new Filter[java.io.File]("FileInputStream",
+    fi => new NamedFileInputStream(fi),
+    fi => !fi.isDirectory)
+  val explore = new Filter[java.io.File]("Explore directory",
+    fi => new TreeViewer(new File(fi), new SimpleStaticCommandRegistry),
+    fi => fi.isDirectory)
 
   val simpleImageViewer = new Filter[BufferedImage]("SimpleImageViewer", new SimpleImageViewer(_))
+
+  def noIndexed(img: BufferedImage): Boolean = {
+    val imgType = img.getType
+    import BufferedImage._
+    (imgType != TYPE_BYTE_INDEXED && imgType != TYPE_BYTE_BINARY)
+  }
+
+  val darken = new Command[BufferedImage]("darken", {
+    img =>
+      val scaleFactor = .9f
+      val op = new RescaleOp(scaleFactor, 0, null)
+      op.filter(img, null)
+  }, noIndexed)
+
+  val brighten = new Command[BufferedImage]("brighten", {
+    img =>
+      val scaleFactor = 1.3f
+      val op = new RescaleOp(scaleFactor, 0, null)
+      op.filter(img, null)
+  }, noIndexed)
+
+  def changeColorspace(img: BufferedImage, imgType: Int): BufferedImage = {
+    val image = new BufferedImage(img.getWidth, img.getHeight, imgType)
+    val g = image.getGraphics
+    g.drawImage(img, 0, 0, null)
+    g.dispose()
+    image
+  }
+
+  val grayscaleSpace = new Command[BufferedImage]("grayscale colorspace",
+    changeColorspace(_, BufferedImage.TYPE_BYTE_GRAY)
+  )
+
+  val rgbaSpace = new Command[BufferedImage]("RGB colorspace",
+    changeColorspace(_, BufferedImage.TYPE_INT_RGB)
+  )
 
   val simpleToString = new Filter[Reader]("to String (head)", simpleReaderToString)
   val simpleToHexString = new Filter[InputStream]("to hex String (head)", simpleInputStreamToHexString)
@@ -123,4 +168,8 @@ object SimpleFunctions {
   val toUpperCase = new Command[String]("to uppercase", _.toUpperCase)
   val trim = new Command[String]("trim", _.trim)
   val saveStrAs = new Command[String]("save as...", saveStringAs)
+
+  val toStringCommand = new Command[java.lang.Object]("Object.toString", _.toString)
+  val getClassCommand = new Command[java.lang.Object]("Object.getClass", _.getClass)
+
 }

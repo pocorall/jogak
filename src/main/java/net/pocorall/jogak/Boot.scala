@@ -8,10 +8,10 @@ import java.awt.image.BufferedImage
 import javax.imageio.ImageIO
 import collection.mutable
 
-trait TreeNodeModel {
-  def parent(): TreeNodeModel
+trait TreeNode {
+  def parent(): TreeNode
 
-  def child(): Array[TreeNodeModel]
+  def child(): List[TreeNode]
 }
 
 trait NamedInputStream {
@@ -20,10 +20,10 @@ trait NamedInputStream {
   def inputStream: InputStream
 }
 
-class File(val file: java.io.File = new java.io.File("/")) extends TreeNodeModel {
+class File(val file: java.io.File = new java.io.File("/")) extends TreeNode {
   def parent() = if (file.getParent == null) null else new File(file.getParentFile)
 
-  def child() = if (file.isDirectory && file.listFiles != null) file.listFiles.map(new File(_)) else Array[TreeNodeModel]()
+  def child() = if (file.isDirectory && file.listFiles != null) file.listFiles.toList.map(new File(_)) else List[TreeNode]()
 
   override def toString() = file.toString
 }
@@ -38,86 +38,48 @@ class NamedFileInputStream(val file: java.io.File) extends NamedInputStream {
 object Extensions {
   val images = Array(".jpg", ".gif", ".png", ".bmp")
   val texts = Array(".txt", ".csv", ".pem", ".xml", ".htm", ".php", ".java", ".html", ".cpp", ".bat", ".h")
+
+  def getExtension(n: String): String = {
+    val name = n.toLowerCase
+    val dot = name.lastIndexOf('.')
+    if (dot > 0) name.substring(dot) else name
+  }
 }
 
 import net.pocorall.jogak.SimpleFunctions._
 
 
-class CommandRegistry {
-  def applyDefaultFilterChain(thing: Any): Any = {
-    lookup(thing).find(c => c.isInstanceOf[Filter[Nothing]]) match {
-      case Some(c) => applyDefaultFilterChain(c.execute(thing))
-      case None => thing
-    }
-  }
-
-  def getDefaultViewer(thing: Any): Viewer = {
-    applyDefaultFilterChain(thing) match {
-      case v: Viewer => v
-      case t => new EverythingViewer(t)
-    }
-  }
-
+class SimpleStaticCommandRegistry extends CommandRegistry {
   def lookup(thing: Any): Array[Command[Nothing]] = {
     val result = new mutable.MutableList[Command[Nothing]]
-    thing match {
-      case f: File => result += filter
-      case _ =>
-    }
-
-    thing match {
-      case f: java.io.File =>
-        if (f.isDirectory) {
-          result += explore
-        } else {
-          result += namedFileInputStream
-        }
-        result += open
-        result += edit
-        result += print
-
-      case _ =>
-    }
-
-    thing match {
-      case n: NamedInputStream => {
-        val name = n.name.toLowerCase
-        val dot = name.lastIndexOf('.')
-        val ext = if (dot > 0) name.substring(dot) else name
-
-        ext match {
-          case e if (Extensions.images contains e) => result += toBufferedImage
-          case e if (Extensions.texts contains e) => result += toReader
-          case _ =>
-        }
-
-        result += toInputStream
+    def addIfAvailable(command: Command[Nothing]) {
+      if (command.isAssignable(thing)) {
+        result += command
       }
-      case _ =>
     }
-
-    thing match {
-      case f: InputStream => result += simpleToHexString
-      case _ =>
-    }
-    thing match {
-      case f: Reader => result += simpleToString
-      case _ =>
-    }
-    thing match {
-      case f: BufferedImage => result += simpleImageViewer
-      case _ =>
-    }
-    thing match {
-      case s: String =>
-        result += simpleStringViewer
-        result += toLowerCase
-        result += toUpperCase
-        result += trim
-        result += saveStrAs
-
-      case _ =>
-    }
+    addIfAvailable(file)
+    addIfAvailable(explore)
+    addIfAvailable(namedFileInputStream)
+    addIfAvailable(open)
+    addIfAvailable(edit)
+    addIfAvailable(print)
+    addIfAvailable(toBufferedImage)
+    addIfAvailable(toReader)
+    addIfAvailable(toInputStream)
+    addIfAvailable(simpleToHexString)
+    addIfAvailable(simpleToString)
+    addIfAvailable(simpleImageViewer)
+    addIfAvailable(darken)
+    addIfAvailable(brighten)
+    addIfAvailable(grayscaleSpace)
+    addIfAvailable(rgbaSpace)
+    addIfAvailable(simpleStringViewer)
+    addIfAvailable(toLowerCase)
+    addIfAvailable(toUpperCase)
+    addIfAvailable(trim)
+    addIfAvailable(saveStrAs)
+    addIfAvailable(toStringCommand)
+    addIfAvailable(getClassCommand)
 
     result.toArray
   }
@@ -129,7 +91,7 @@ object Boot {
       def run() {
         val frame = new JFrame("Jogak")
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE)
-        implicit val viewerRegistry = new CommandRegistry
+        implicit val viewerRegistry = new SimpleStaticCommandRegistry
 
         val label = new TreeViewer(new File(new io.File("/")), viewerRegistry)
         frame.getContentPane().add(label)

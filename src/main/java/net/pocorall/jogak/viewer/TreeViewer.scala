@@ -7,7 +7,7 @@ import java.awt.event.{MouseEvent, MouseAdapter, ActionListener, ActionEvent}
 import java.awt.{Dimension, BorderLayout}
 import net.pocorall.jogak._
 
-class TreeViewer(var model: TreeNodeModel, implicit val viewerRegistry: CommandRegistry) extends Viewer {
+class TreeViewer(var model: TreeNode, implicit val viewerRegistry: CommandRegistry) extends Viewer {
   override def thing = model
 
   val tableModel = new TableModel() {
@@ -53,9 +53,8 @@ class TreeViewer(var model: TreeNodeModel, implicit val viewerRegistry: CommandR
           spane.setRightComponent(viewerRegistry.getDefaultViewer(newModel))
         }
       } else {
-
         val menu = new JPopupMenu()
-        SimpleFunctions.buildMenu(newModel, menu, spane)
+        SimpleFunctions.buildMenu(newModel, menu, spane.setRightComponent(_))
 
         menu.show(e.getComponent(), e.getX(), e.getY());
       }
@@ -73,9 +72,14 @@ class TreeViewer(var model: TreeNodeModel, implicit val viewerRegistry: CommandR
 
   leftPane.add(upButton, BorderLayout.NORTH)
 
+  private val closeButton = new JButton("Close")
+
+
+  leftPane.add(closeButton, BorderLayout.SOUTH)
+
   leftPane.add(new JScrollPane(table), BorderLayout.CENTER)
 
-  def setModel(newModel: TreeNodeModel) {
+  def setModel(newModel: TreeNode) {
     model = newModel
     table.getColumnModel().getColumn(0).setHeaderValue(model.toString)
     upButton.setEnabled(model.parent != null)

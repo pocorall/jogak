@@ -1,26 +1,30 @@
 package net.pocorall.jogak.viewer
 
 import net.pocorall.jogak.Viewer
-import javax.swing.{JLabel, JScrollPane, JTextArea}
+import javax.swing.{SwingUtilities, JLabel, JScrollPane, JTextArea}
 import java.awt.image.BufferedImage
-import java.awt.Graphics
+import java.awt.{BorderLayout, Graphics}
+import java.awt.event.{MouseEvent, MouseAdapter}
 
 class SimpleStringViewer(str: String) extends Viewer {
   override def thing = str
 
   private val textArea = new JTextArea(str)
   textArea.setEditable(false)
-  add(new JScrollPane(textArea))
+  addContextMenuListener(textArea)
+
+  add(new JScrollPane(textArea), BorderLayout.CENTER)
 }
 
 class EverythingViewer(obj: Any) extends Viewer {
   override def thing = obj
-
+  addContextMenuListener(this)
   add(new JLabel("Anything: " + obj.toString))
 }
 
 class SimpleImageViewer(img: BufferedImage) extends Viewer {
   override def thing = img
+  addContextMenuListener(this)
 
   override def paintComponent(g: Graphics) {
     super.paintComponent(g)
