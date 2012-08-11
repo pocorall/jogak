@@ -1,12 +1,12 @@
 package net.pocorall.jogak.viewer
 
-import net.pocorall.jogak.{SplitViewer, Viewer}
+import net.pocorall.jogak.{CommandRegistry, SplitViewer, Viewer}
 import javax.swing._
 import java.awt.image.BufferedImage
 import java.awt.{BorderLayout, Graphics}
 import java.awt.event.{MouseEvent, MouseAdapter}
 
-class SimpleStringViewer(str: String) extends Viewer {
+class SimpleStringViewer(str: String)(implicit commandRegistry: CommandRegistry) extends Viewer {
   override def thing = str
 
   private val textArea = new JTextArea(str)
@@ -16,14 +16,14 @@ class SimpleStringViewer(str: String) extends Viewer {
   add(new JScrollPane(textArea), BorderLayout.CENTER)
 }
 
-class EverythingViewer(obj: Any) extends Viewer {
+class EverythingViewer(obj: Any)(implicit commandRegistry: CommandRegistry) extends Viewer {
   override def thing = obj
 
   addContextMenuListener(this)
   add(new JLabel("Anything: " + obj.toString))
 }
 
-class SimpleImageViewer(img: BufferedImage) extends Viewer {
+class SimpleImageViewer(img: BufferedImage)(implicit commandRegistry: CommandRegistry) extends Viewer {
   override def thing = img
 
   addContextMenuListener(this)
@@ -34,7 +34,7 @@ class SimpleImageViewer(img: BufferedImage) extends Viewer {
   }
 }
 
-class ListViewer(lst: List[Any]) extends SplitViewer {
+class ListViewer(lst: List[Any])(implicit commandRegistry: CommandRegistry) extends SplitViewer {
   override def thing = lst
 
   val selfButton = new JButton("Self")

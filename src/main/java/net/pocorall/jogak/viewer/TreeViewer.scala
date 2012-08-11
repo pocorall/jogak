@@ -7,7 +7,7 @@ import java.awt.event.{MouseEvent, MouseAdapter, ActionListener, ActionEvent}
 import java.awt.{Dimension, BorderLayout}
 import net.pocorall.jogak._
 
-class TreeViewer(var model: TreeNode, implicit val viewerRegistry: CommandRegistry) extends SplitViewer {
+class TreeViewer(var model: TreeNode)(implicit val commandRegistry: CommandRegistry) extends SplitViewer {
   override def thing = model
 
   val tableModel = new TableModel() {
@@ -49,7 +49,7 @@ class TreeViewer(var model: TreeNode, implicit val viewerRegistry: CommandRegist
         if (e.getClickCount == 2) {
           setModel(newModel)
         } else {
-          showView(viewerRegistry.getDefaultViewer(newModel))
+          showView(commandRegistry.getDefaultViewer(newModel))
         }
       } else {
         showContextMenu(e.getComponent, e.getX, e.getY, newModel)

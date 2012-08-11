@@ -6,7 +6,7 @@ import java.awt.event.{MouseEvent, MouseAdapter}
 import viewer.EverythingViewer
 
 
-abstract class Viewer extends JPanel(new BorderLayout) {
+abstract class Viewer(implicit commandRegistry: CommandRegistry) extends JPanel(new BorderLayout) {
   def thing: Any
 
   def showContextMenu(component: Component, x: Int, y: Int, model: Any = thing) {
@@ -34,7 +34,7 @@ abstract class Viewer extends JPanel(new BorderLayout) {
   }
 }
 
-abstract class SplitViewer extends Viewer {
+abstract class SplitViewer(implicit commandRegistry: CommandRegistry) extends Viewer {
 
   protected val leftPane = new JPanel(new BorderLayout)
   leftPane.setMinimumSize(new Dimension(200, 150))
@@ -78,7 +78,7 @@ abstract class CommandRegistry {
   def getDefaultViewer(thing: Any): Viewer = {
     applyDefaultFilterChain(thing) match {
       case v: Viewer => v
-      case t => new EverythingViewer(t)
+      case t => new EverythingViewer(t)(this)
     }
   }
 

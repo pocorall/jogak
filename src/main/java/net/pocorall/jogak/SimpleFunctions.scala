@@ -7,11 +7,9 @@ import java.awt.{Color, Desktop}
 import java.awt.image.{RescaleOp, BufferedImage}
 import viewer.{ListViewer, TreeViewer, SimpleStringViewer, SimpleImageViewer}
 import java.awt.event.{ActionListener, ActionEvent}
-import java.util.StringTokenizer
 import org.apache.poi.hslf.usermodel.SlideShow
 import java.awt.geom.Rectangle2D
 import org.apache.pdfbox.pdmodel.{PDPage, PDDocument}
-import org.apache.pdfbox.util.{ImageIOUtil, PDFImageWriter}
 
 
 object SimpleFunctions {
@@ -80,10 +78,9 @@ object SimpleFunctions {
     menu.add(item)
   }
 
-  val cr = new SimpleStaticCommandRegistry()
 
-  def buildMenu(obj: Any, menu: JComponent, showView: Viewer => Unit) {
-    cr.lookup(obj).foreach {
+  def buildMenu(obj: Any, menu: JComponent, showView: Viewer => Unit)(implicit commandRegistry: CommandRegistry) {
+    commandRegistry.lookup(obj).foreach {
       com => com match {
         case c: Filter[Nothing] =>
           try {
@@ -100,11 +97,13 @@ object SimpleFunctions {
             case e: Throwable => e.printStackTrace() //swallow
           }
         case c: Command[Nothing] =>
-          addMenuItem(menu, com.name, _ => showView((new SimpleStaticCommandRegistry).getDefaultViewer(com.execute(obj))))
+          addMenuItem(menu, com.name, _ => showView(commandRegistry.getDefaultViewer(com.execute(obj))))
         case _ =>
       }
     }
   }
+
+  implicit val commandRegistry = new IntrospectionCommandRegistry
 
   val file = new Filter[File]("File", _.file)
 
@@ -124,7 +123,7 @@ object SimpleFunctions {
     fi => new NamedFileInputStream(fi),
     fi => !fi.isDirectory)
   val explore = new Filter[java.io.File]("Explore directory",
-    fi => new TreeViewer(new File(fi), new SimpleStaticCommandRegistry),
+    fi => new TreeViewer(new File(fi)),
     fi => fi.isDirectory)
 
   val simpleImageViewer = new Filter[BufferedImage]("SimpleImageViewer", new SimpleImageViewer(_))
@@ -170,14 +169,9 @@ object SimpleFunctions {
   val simpleToByteHexString = new Command[InputStream]("to byte hex String (head)", simpleInputStreamToHexString(_, "%d "))
 
   val simpleStringViewer = new Filter[String]("SimpleStringViewer", new SimpleStringViewer(_))
-  val toLowerCase = new Command[String]("to lowercase", _.toLowerCase)
-  val toUpperCase = new Command[String]("to uppercase", _.toUpperCase)
   val trim = new Command[String]("split lines", _.split("\n").toList)
   val listView = new Filter[List[Any]]("ListViewer", new ListViewer(_))
   val saveStrAs = new Command[String]("save as...", saveStringAs)
-
-  val toStringCommand = new Command[java.lang.Object]("Object.toString", _.toString)
-  val getClassCommand = new Command[java.lang.Object]("Object.getClass", _.getClass)
 
   val PPTtoImageList = new Command[InputStream]("pptToImageList", {
     (is: InputStream) =>

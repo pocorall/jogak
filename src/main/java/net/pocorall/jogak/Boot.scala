@@ -3,10 +3,11 @@ package net.pocorall.jogak
 import javax.swing._
 import java.io
 import io._
-import viewer.{EverythingViewer, TreeViewer, SimpleImageViewer, SimpleStringViewer}
-import java.awt.image.BufferedImage
-import javax.imageio.ImageIO
+import viewer.TreeViewer
 import collection.mutable
+import java.lang.reflect.Method
+import org.specs2.internal.scalaz.Digit._0
+
 
 trait TreeNode {
   def parent(): TreeNode
@@ -75,8 +76,6 @@ class SimpleStaticCommandRegistry extends CommandRegistry {
     addIfAvailable(grayscaleSpace)
     addIfAvailable(rgbaSpace)
     addIfAvailable(simpleStringViewer)
-    addIfAvailable(toLowerCase)
-    addIfAvailable(toUpperCase)
     addIfAvailable(trim)
     addIfAvailable(saveStrAs)
     addIfAvailable(listView)
@@ -85,8 +84,30 @@ class SimpleStaticCommandRegistry extends CommandRegistry {
     addIfAvailable(pdPages)
     addIfAvailable(pdPageToImage)
 
-    addIfAvailable(toStringCommand)
-    addIfAvailable(getClassCommand)
+    result.toArray
+  }
+}
+
+class IntrospectionCommandRegistry extends CommandRegistry {
+  val parent = new SimpleStaticCommandRegistry
+
+  def getFullName(method: Method): String = {
+    method.getName + method.getParameterTypes.map(_.getSimpleName).mkString("(", ", ", ")") +
+      ": " + method.getReturnType.getSimpleName
+  }
+
+  def lookup(thing: Any): Array[Command[Nothing]] = {
+    val result = new mutable.MutableList[Command[Nothing]]
+    result ++= parent.lookup(thing)
+
+    val clazz = thing.asInstanceOf[AnyRef].getClass
+    val methods = clazz.getDeclaredMethods
+    methods.foreach(
+      method =>
+        result += new Command[Any](
+          "." + getFullName(method), obj => method.invoke(obj)
+        )
+    )
 
     result.toArray
   }
@@ -98,9 +119,9 @@ object Boot {
       def run() {
         val frame = new JFrame("Jogak")
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE)
-        implicit val viewerRegistry = new SimpleStaticCommandRegistry
+        implicit val viewerRegistry = new IntrospectionCommandRegistry
 
-        val label = new TreeViewer(new File(new io.File("/")), viewerRegistry)
+        val label = new TreeViewer(new File(new io.File("/")))
         frame.getContentPane().add(label)
 
         frame.pack()
