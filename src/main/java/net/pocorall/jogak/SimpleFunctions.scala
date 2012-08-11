@@ -3,15 +3,18 @@ package net.pocorall.jogak
 import java.io.{InputStreamReader, BufferedReader, Reader, InputStream}
 import javax.swing._
 import javax.imageio.ImageIO
-import java.awt.Desktop
+import java.awt.{Color, Desktop}
 import java.awt.image.{RescaleOp, BufferedImage}
 import viewer.{ListViewer, TreeViewer, SimpleStringViewer, SimpleImageViewer}
 import java.awt.event.{ActionListener, ActionEvent}
 import java.util.StringTokenizer
+import org.apache.poi.hslf.usermodel.SlideShow
+import java.awt.geom.Rectangle2D
+
 
 object SimpleFunctions {
 
-  def simpleInputStreamToHexString(in: InputStream) = {
+  def simpleInputStreamToHexString(in: InputStream, formatStr: String = "%02X ") = {
     val out = new StringBuilder()
     var ind: Int = 0
     var remained: Boolean = false
@@ -26,7 +29,7 @@ object SimpleFunctions {
           }
           out.append("0x%08X \t".format(ind))
         }
-        out.append("%02X ".format(v))
+        out.append(formatStr.format(v))
         ind += 1
     }
     if (remained) {
@@ -116,7 +119,7 @@ object SimpleFunctions {
   val open = new Command[java.io.File]("open", fi => Desktop.getDesktop().open(fi))
   val edit = new Command[java.io.File]("edit", fi => Desktop.getDesktop().edit(fi))
   val print = new Command[java.io.File]("print", fi => Desktop.getDesktop().print(fi))
-  val namedFileInputStream = new Filter[java.io.File]("FileInputStream",
+  val namedFileInputStream = new Filter[java.io.File]("to NamedInputStream",
     fi => new NamedFileInputStream(fi),
     fi => !fi.isDirectory)
   val explore = new Filter[java.io.File]("Explore directory",
@@ -161,8 +164,9 @@ object SimpleFunctions {
     changeColorspace(_, BufferedImage.TYPE_INT_RGB)
   )
 
-  val simpleToString = new Filter[Reader]("to String (head)", simpleReaderToString)
-  val simpleToHexString = new Filter[InputStream]("to hex String (head)", simpleInputStreamToHexString)
+  val simpleToString = new Command[Reader]("to String (head)", simpleReaderToString)
+  val simpleToHexString = new Command[InputStream]("to hex String (head)", simpleInputStreamToHexString(_))
+  val simpleToByteHexString = new Command[InputStream]("to byte hex String (head)", simpleInputStreamToHexString(_, "%d "))
 
   val simpleStringViewer = new Filter[String]("SimpleStringViewer", new SimpleStringViewer(_))
   val toLowerCase = new Command[String]("to lowercase", _.toLowerCase)
@@ -173,5 +177,22 @@ object SimpleFunctions {
 
   val toStringCommand = new Command[java.lang.Object]("Object.toString", _.toString)
   val getClassCommand = new Command[java.lang.Object]("Object.getClass", _.getClass)
+
+  val PPTtoImageList = new Command[InputStream]("pptToImageList", {
+    (is: InputStream) =>
+      val ppt = new SlideShow(is)
+      val pgsize = ppt.getPageSize
+      val slides = ppt.getSlides
+
+      slides.map {
+        slide =>
+          val img = new BufferedImage(pgsize.width, pgsize.height, BufferedImage.TYPE_INT_RGB)
+          val graphics = img.createGraphics()
+          graphics.setPaint(Color.white)
+          graphics.fill(new Rectangle2D.Float(0, 0, pgsize.width, pgsize.height))
+          slide.draw(graphics)
+          img
+      }.toList
+  })
 
 }

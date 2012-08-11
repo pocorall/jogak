@@ -67,6 +67,7 @@ class SimpleStaticCommandRegistry extends CommandRegistry {
     addIfAvailable(toReader)
     addIfAvailable(toInputStream)
     addIfAvailable(simpleToHexString)
+    addIfAvailable(simpleToByteHexString)
     addIfAvailable(simpleToString)
     addIfAvailable(simpleImageViewer)
     addIfAvailable(darken)
@@ -81,6 +82,7 @@ class SimpleStaticCommandRegistry extends CommandRegistry {
     addIfAvailable(listView)
     addIfAvailable(toStringCommand)
     addIfAvailable(getClassCommand)
+    addIfAvailable(PPTtoImageList)
 
     result.toArray
   }
