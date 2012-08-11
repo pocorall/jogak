@@ -80,9 +80,13 @@ class SimpleStaticCommandRegistry extends CommandRegistry {
     addIfAvailable(trim)
     addIfAvailable(saveStrAs)
     addIfAvailable(listView)
+    addIfAvailable(PPTtoImageList)
+    addIfAvailable(NIStoPDFBox)
+    addIfAvailable(pdPages)
+    addIfAvailable(pdPageToImage)
+
     addIfAvailable(toStringCommand)
     addIfAvailable(getClassCommand)
-    addIfAvailable(PPTtoImageList)
 
     result.toArray
   }

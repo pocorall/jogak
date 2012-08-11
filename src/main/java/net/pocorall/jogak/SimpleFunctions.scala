@@ -10,6 +10,8 @@ import java.awt.event.{ActionListener, ActionEvent}
 import java.util.StringTokenizer
 import org.apache.poi.hslf.usermodel.SlideShow
 import java.awt.geom.Rectangle2D
+import org.apache.pdfbox.pdmodel.{PDPage, PDDocument}
+import org.apache.pdfbox.util.{ImageIOUtil, PDFImageWriter}
 
 
 object SimpleFunctions {
@@ -91,12 +93,11 @@ object SimpleFunctions {
                 addMenuItem(menu, com.name, _ => showView(f))
               case _ =>
                 val m = new JMenu(com.name)
-                //                  println(result.getClass().toString)
                 buildMenu(result, m, showView)
                 menu.add(m)
             }
           } catch {
-            case e: Any => //swallow
+            case e: Throwable => e.printStackTrace() //swallow
           }
         case c: Command[Nothing] =>
           addMenuItem(menu, com.name, _ => showView((new SimpleStaticCommandRegistry).getDefaultViewer(com.execute(obj))))
@@ -195,4 +196,16 @@ object SimpleFunctions {
       }.toList
   })
 
+  import scala.collection.JavaConversions._
+
+  val NIStoPDFBox = new Command[NamedInputStream]("to PDFBox document",
+    is => PDDocument.load(is.inputStream),
+    is => ".pdf" equals Extensions.getExtension(is.name)
+  )
+
+  val pdPages = new Command[PDDocument]("get all pages",
+    _.getDocumentCatalog.getAllPages.asInstanceOf[java.util.List[PDPage]].toList
+  )
+
+  val pdPageToImage = new Command[PDPage]("to BufferedImage", _.convertToImage(BufferedImage.TYPE_INT_RGB, 100))
 }
