@@ -5,8 +5,9 @@ import javax.swing._
 import javax.imageio.ImageIO
 import java.awt.Desktop
 import java.awt.image.{RescaleOp, BufferedImage}
-import viewer.{TreeViewer, SimpleStringViewer, SimpleImageViewer}
+import viewer.{ListViewer, TreeViewer, SimpleStringViewer, SimpleImageViewer}
 import java.awt.event.{ActionListener, ActionEvent}
+import java.util.StringTokenizer
 
 object SimpleFunctions {
 
@@ -166,7 +167,8 @@ object SimpleFunctions {
   val simpleStringViewer = new Filter[String]("SimpleStringViewer", new SimpleStringViewer(_))
   val toLowerCase = new Command[String]("to lowercase", _.toLowerCase)
   val toUpperCase = new Command[String]("to uppercase", _.toUpperCase)
-  val trim = new Command[String]("trim", _.trim)
+  val trim = new Command[String]("split lines", _.split("\n").toList)
+  val listView = new Filter[List[Any]]("ListViewer", new ListViewer(_))
   val saveStrAs = new Command[String]("save as...", saveStringAs)
 
   val toStringCommand = new Command[java.lang.Object]("Object.toString", _.toString)

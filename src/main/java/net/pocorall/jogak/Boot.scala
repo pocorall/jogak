@@ -78,6 +78,7 @@ class SimpleStaticCommandRegistry extends CommandRegistry {
     addIfAvailable(toUpperCase)
     addIfAvailable(trim)
     addIfAvailable(saveStrAs)
+    addIfAvailable(listView)
     addIfAvailable(toStringCommand)
     addIfAvailable(getClassCommand)
 

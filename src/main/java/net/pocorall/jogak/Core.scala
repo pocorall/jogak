@@ -1,7 +1,7 @@
 package net.pocorall.jogak
 
 import javax.swing._
-import java.awt.{Component, BorderLayout}
+import java.awt.{Dimension, Component, BorderLayout}
 import java.awt.event.{MouseEvent, MouseAdapter}
 import viewer.EverythingViewer
 
@@ -9,9 +9,9 @@ import viewer.EverythingViewer
 abstract class Viewer extends JPanel(new BorderLayout) {
   def thing: Any
 
-  def showContextMenu(component: Component, x: Int, y: Int) {
+  def showContextMenu(component: Component, x: Int, y: Int, model: Any = thing) {
     val menu = new JPopupMenu()
-    SimpleFunctions.buildMenu(thing, menu, showView(_))
+    SimpleFunctions.buildMenu(model, menu, showView(_))
 
     menu.show(component, x, y)
   }
@@ -34,6 +34,19 @@ abstract class Viewer extends JPanel(new BorderLayout) {
   }
 }
 
+abstract class SplitViewer extends Viewer {
+
+  protected val leftPane = new JPanel(new BorderLayout)
+  leftPane.setMinimumSize(new Dimension(200, 150))
+
+  protected val spane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, leftPane, new JLabel("Hello"))
+
+  add(spane, BorderLayout.CENTER)
+
+  override def showView(view: Viewer) {
+    spane.setRightComponent(view)
+  }
+}
 
 trait ViewerRegistry {
   def lookup(thing: Any): Viewer

@@ -7,7 +7,7 @@ import java.awt.event.{MouseEvent, MouseAdapter, ActionListener, ActionEvent}
 import java.awt.{Dimension, BorderLayout}
 import net.pocorall.jogak._
 
-class TreeViewer(var model: TreeNode, implicit val viewerRegistry: CommandRegistry) extends Viewer {
+class TreeViewer(var model: TreeNode, implicit val viewerRegistry: CommandRegistry) extends SplitViewer {
   override def thing = model
 
   val tableModel = new TableModel() {
@@ -38,7 +38,6 @@ class TreeViewer(var model: TreeNode, implicit val viewerRegistry: CommandRegist
     }
   }
 
-
   table.addMouseListener(new MouseAdapter() {
     override def mouseClicked(e: MouseEvent) {
       val p = e.getPoint
@@ -50,20 +49,13 @@ class TreeViewer(var model: TreeNode, implicit val viewerRegistry: CommandRegist
         if (e.getClickCount == 2) {
           setModel(newModel)
         } else {
-          spane.setRightComponent(viewerRegistry.getDefaultViewer(newModel))
+          showView(viewerRegistry.getDefaultViewer(newModel))
         }
       } else {
-        val menu = new JPopupMenu()
-        SimpleFunctions.buildMenu(newModel, menu, spane.setRightComponent(_))
-
-        menu.show(e.getComponent(), e.getX(), e.getY());
+        showContextMenu(e.getComponent, e.getX, e.getY, newModel)
       }
     }
   })
-
-
-  private val leftPane = new JPanel(new BorderLayout)
-  leftPane.setMinimumSize(new Dimension(150, 150))
 
   private val upButton = new JButton("Up")
   upButton.addActionListener {
@@ -89,8 +81,4 @@ class TreeViewer(var model: TreeNode, implicit val viewerRegistry: CommandRegist
 
   setModel(model)
 
-  private val spane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT,
-    leftPane, new JLabel("Hello"));
-
-  add(spane, BorderLayout.CENTER);
 }
